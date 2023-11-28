@@ -27,7 +27,7 @@ public class C4TimerConfig : BasePluginConfig
 public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 {
     public override string ModuleName => "C4 Timer";
-    public override string ModuleVersion => "1.0.0";
+    public override string ModuleVersion => "1.0.1";
     public override string ModuleAuthor => "belom0r";
 
     private bool g_bPlantedC4 = false;
@@ -62,11 +62,8 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 
         g_bPlantedC4 = true;
 
-        if (float.IsNaN(g_flTimerLengthC4) || float.IsNaN(g_flTimerСountdownC4))
-        {
-            g_flTimerLengthC4 = ElementPlantedC4.TimerLength + 1.0f;
-            g_flTimerСountdownC4 = ElementPlantedC4.TimerLength + 1.0f;
-        }
+        g_flTimerLengthC4 = ElementPlantedC4.TimerLength + 1.0f;
+        g_flTimerСountdownC4 = ElementPlantedC4.TimerLength + 1.0f;
 
         g_CountdownToExplosionC4 = new Timer(1.0f, CountdownToExplosionC4, TimerFlags.REPEAT);
         Timers.Add(g_CountdownToExplosionC4);
@@ -114,7 +111,10 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
                 }
             }
 
-            VirtualFunctions.ClientPrintAll(HudDestination.Center, Style, 0, 0, 0, 0);
+            if (!string.IsNullOrEmpty(Style))
+            {
+                VirtualFunctions.ClientPrintAll(HudDestination.Center, Style, 0, 0, 0, 0);
+            }
         }
 
         if (g_flTimerСountdownC4 == 0 || !g_bPlantedC4)
