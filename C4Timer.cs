@@ -1,4 +1,4 @@
-﻿using CounterStrikeSharp.API;
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Timers;
@@ -13,6 +13,9 @@ public class C4TimerConfig : BasePluginConfig
 {
     [JsonPropertyName("EnableTimer")]
     public bool EnableTimer { get; set; } = true;
+
+    [JsonPropertyName("TimerStarting")]
+    public int TimerStarting { get; set; } = 45;
 
     [JsonPropertyName("EnableProgressBar")]
     public bool EnableProgressBar { get; set; } = true;
@@ -65,6 +68,11 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         g_flTimerLengthC4 = ElementPlantedC4.TimerLength + 1.0f;
         g_flTimerСountdownC4 = ElementPlantedC4.TimerLength + 1.0f;
 
+        if (Config.TimerStarting > (int)g_flTimerLengthC4 || Config.TimerStarting < 0)
+        {
+            Config.TimerStarting = (int)g_flTimerLengthC4;
+        }
+
         g_CountdownToExplosionC4 = new Timer(1.0f, CountdownToExplosionC4, TimerFlags.REPEAT);
         Timers.Add(g_CountdownToExplosionC4);
 
@@ -83,31 +91,46 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         {
             string Style = "";
 
-            if (Config.EnableProgressBar)
+            if (g_flTimerСountdownC4 <= Config.TimerStarting)
             {
-                for (int i = (int)g_flTimerLengthC4; i > 0; i--)
+                if (Config.EnableProgressBar)
                 {
-                    if (i > g_flTimerСountdownC4)
+                    int TimerStarting;
+
+                    if (Config.TimerStarting > 0)
                     {
-                        Style = Style + $"|";
+                        TimerStarting = Config.TimerStarting;
                     }
                     else
                     {
-                        Style = Style + $"-";
+                        TimerStarting = (int)g_flTimerLengthC4;
                     }
-                }
-                Style = $"[ {Style} ]";
-            }
 
-            if (Config.EnableTimer)
-            {
-                if (string.IsNullOrEmpty(Style))
-                {
-                    Style = $"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}";
+                    for (int i = TimerStarting; i > 0; i--)
+                    {
+                        if (i > g_flTimerСountdownC4)
+                        {
+                            Style = Style + $"|";
+                        }
+                        else
+                        {
+                            Style = Style + $"-";
+                        }
+                    }
+
+                    Style = $"[ {Style} ]";
                 }
-                else
+
+                if (Config.EnableTimer)
                 {
-                    Style = ConnectTransferString($"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}", Style);
+                    if (string.IsNullOrEmpty(Style))
+                    {
+                        Style = $"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}";
+                    }
+                    else
+                    {
+                        Style = ConnectTransferString($"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}", Style);
+                    }
                 }
             }
 
