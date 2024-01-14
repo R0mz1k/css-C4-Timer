@@ -7,18 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="CounterStrikeSharp.API">
-      <HintPath>..\..\api\CounterStrikeSharp.API.dll</HintPath>
-    </Reference>
-    <Reference Include="McMaster.NETCore.Plugins">
-      <HintPath>..\..\api\McMaster.NETCore.Plugins.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.DotNet.PlatformAbstractions">
-      <HintPath>..\..\api\Microsoft.DotNet.PlatformAbstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.DependencyModel">
-      <HintPath>..\..\api\Microsoft.Extensions.DependencyModel.dll</HintPath>
-    </Reference>
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.142" />
   </ItemGroup>
 
 </Project>
