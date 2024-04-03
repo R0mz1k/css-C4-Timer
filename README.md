@@ -7,9 +7,13 @@ This plugin adds countdown to c4 bomb explosion to your server.
 ```
 {
   "EnableTimer": true,
-  "TimerStarting": 45,
   "EnableProgressBar": true,
+  "TimerStarting": 45,
   "LeftSideTimer": "-[ ",
-  "RightSideTimer": " ]-"
+  "RightSideTimer": " ]-",
+  "EnableColorMessage": false,
+  "TimeColor": "20:yellow, 10:red, 5: darkred",
+  "ProgressBarColor": "20:yellow, 10:red, 5: darkred",
+  "ConfigVersion": 1
 }
 
