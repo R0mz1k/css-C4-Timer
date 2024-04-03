@@ -1,4 +1,4 @@
-using CounterStrikeSharp.API;
+﻿using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Timers;
@@ -14,28 +14,42 @@ public class C4TimerConfig : BasePluginConfig
     [JsonPropertyName("EnableTimer")]
     public bool EnableTimer { get; set; } = true;
 
-    [JsonPropertyName("TimerStarting")]
-    public int TimerStarting { get; set; } = 45;
-
     [JsonPropertyName("EnableProgressBar")]
     public bool EnableProgressBar { get; set; } = true;
+
+    [JsonPropertyName("TimerStarting")]
+    public int TimerStarting { get; set; } = 45;
 
     [JsonPropertyName("LeftSideTimer")]
     public string LeftSideTimer { get; set; } = "-[ ";
 
     [JsonPropertyName("RightSideTimer")]
     public string RightSideTimer { get; set; } = " ]-";
+
+    [JsonPropertyName("EnableColorMessage")]
+    public bool EnableColorMessage { get; set; } = true;
+
+    [JsonPropertyName("TimeColor")]
+    public string TimeColor { get; set; } = "20:yellow, 10:red, 5: darkred";
+
+    [JsonPropertyName("ProgressBarColor")]
+    public string ProgressBarColor { get; set; } = "20:yellow, 10:red, 5: darkred";
 }
 
 public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 {
     public override string ModuleName => "C4 Timer";
-    public override string ModuleVersion => "1.0.1";
+    public override string ModuleVersion => "1.3";
     public override string ModuleAuthor => "belom0r";
+
+    Dictionary<int, string> TimeColor = new Dictionary<int, string>();
+    Dictionary<int, string> ProgressBarColor = new Dictionary<int, string>();
 
     private bool g_bPlantedC4 = false;
     private float g_flTimerLengthC4 = float.NaN;
     private float g_flTimerСountdownC4 = float.NaN;
+
+    private string g_MsgTimerСountdownC4 = "";
 
     private Timer? g_CountdownToExplosionC4;
 
@@ -52,6 +66,18 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         RegisterEventHandler<EventRoundStart>((@event, info) => { g_bPlantedC4 = false; ; return HookResult.Continue;});
         RegisterEventHandler<EventBombExploded>((@event, info) => { g_bPlantedC4 = false; return HookResult.Continue; });
         RegisterEventHandler<EventBombDefused>((@event, info) => { g_bPlantedC4 = false; return HookResult.Continue; });
+
+        if (Config.EnableColorMessage)
+        {
+            RegisterListener<Listeners.OnTick>(OnTick);
+        }
+
+        if (Config.EnableColorMessage)
+        {
+            ColorMsg(Config.TimeColor, TimeColor);
+            ColorMsg(Config.ProgressBarColor, ProgressBarColor);
+        }
+
     }
 
     private HookResult BombPlantedPost(EventBombPlanted @event, GameEventInfo info)
@@ -74,22 +100,46 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         }
 
         g_CountdownToExplosionC4 = new Timer(1.0f, CountdownToExplosionC4, TimerFlags.REPEAT);
+
         Timers.Add(g_CountdownToExplosionC4);
 
         return HookResult.Continue;
+    }
+
+    public void OnTick()
+    {
+        if (!string.IsNullOrEmpty(g_MsgTimerСountdownC4))
+        {
+            List<CCSPlayerController> Players = GetPlayers();
+
+            foreach (var Player in Players)
+            {
+                Player.PrintToCenterHtml(g_MsgTimerСountdownC4);
+            }
+        }
     }
 
     public void CountdownToExplosionC4()
     {
         g_flTimerСountdownC4--;
 
+        string Style = "";
+
         if (g_flTimerСountdownC4 == 0)
         {
-            VirtualFunctions.ClientPrintAll(HudDestination.Center, $"C4 bomb exploded !!!", 0, 0, 0, 0);
+            if (Config.EnableColorMessage)
+            {
+                Style = "<font class='fontSize-m' color='darkred'>C4 bomb exploded !!!</font>";
+            }
+            else
+            {
+                Style = "C4 bomb exploded !!!";
+            }
         }
         else
         {
-            string Style = "";
+            string StyleTimer = "";
+            string StyleProgressBar = "";
 
             if (g_flTimerСountdownC4 <= Config.TimerStarting)
             {
@@ -98,46 +148,39 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
                     int TimerStarting;
 
                     if (Config.TimerStarting > 0)
-                    {
                         TimerStarting = Config.TimerStarting;
-                    }
                     else
-                    {
                         TimerStarting = (int)g_flTimerLengthC4;
-                    }
 
                     for (int i = TimerStarting; i > 0; i--)
                     {
                         if (i > g_flTimerСountdownC4)
-                        {
-                            Style = Style + $"|";
-                        }
+                            StyleProgressBar = StyleProgressBar + $"|";
                         else
-                        {
-                            Style = Style + $"-";
-                        }
+                            StyleProgressBar = StyleProgressBar + $"-";
                     }
 
-                    Style = $"[ {Style} ]";
+                    StyleProgressBar = $"[ {StyleProgressBar} ]";
                 }
 
                 if (Config.EnableTimer)
                 {
-                    if (string.IsNullOrEmpty(Style))
-                    {
-                        Style = $"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}";
-                    }
-                    else
-                    {
-                        Style = ConnectTransferString($"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}", Style);
-                    }
+                    StyleTimer = $"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}";
                 }
-            }
 
-            if (!string.IsNullOrEmpty(Style))
-            {
-                VirtualFunctions.ClientPrintAll(HudDestination.Center, Style, 0, 0, 0, 0);
+                if (Config.EnableColorMessage)
+                    Style = $"<font class='fontSize-m' color='{TimeColor[(int)g_flTimerСountdownC4]}'>{StyleTimer}</font><br><font class='fontSize-m' color='{ProgressBarColor[(int)g_flTimerСountdownC4]}'>{StyleProgressBar}</font>";
+                else
+                    Style = ConnectTransferString(StyleTimer, StyleProgressBar);
             }
+        }
+
+        if (!string.IsNullOrEmpty(Style))
+        {
+            if (Config.EnableColorMessage)
+                g_MsgTimerСountdownC4 = Style;
+            else
+                VirtualFunctions.ClientPrintAll(HudDestination.Center, Style, 0, 0, 0, 0);
         }
 
         if (g_flTimerСountdownC4 == 0 || !g_bPlantedC4)
@@ -148,6 +191,7 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 
             g_flTimerLengthC4 = float.NaN;
             g_flTimerСountdownC4 = float.NaN;
+            g_MsgTimerСountdownC4 = "";
         }
     }
 
@@ -163,7 +207,7 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         return PlantedC4.FirstOrDefault();
     }
 
-    string ConnectTransferString(string String1, string String2)
+    public string ConnectTransferString(string String1, string String2)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -173,5 +217,36 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         {
             return $"{String1}\n{String2}";
         }
+    }
+
+    public void ColorMsg(string Msg, Dictionary<int, string> TimeColor)
+    {
+        TimeColor.Clear();
+
+        for (int i = 0; i <= Config.TimerStarting; i++)
+        {
+            TimeColor.Add(i, "white");
+        }
+
+        if (!string.IsNullOrEmpty(Msg))
+        {
+            string[] Colors = Msg.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var Color in Colors)
+            {
+                string[] Elements = Color.Split(':', StringSplitOptions.RemoveEmptyEntries);
+
+                for (int i = int.Parse(Elements[0]); i >= 0; i--)
+                {
+                    TimeColor[i] = Elements[1];
+                }
+            }
+        }
+    }
+
+    public List<CCSPlayerController> GetPlayers()
+    {
+        List<CCSPlayerController> players = Utilities.GetPlayers();
+        return players.FindAll(player => player != null && player.IsValid && player.PlayerPawn.IsValid && player.PlayerPawn.Value?.IsValid == true && player.Connected == PlayerConnectedState.PlayerConnected);
     }
 }
