@@ -29,21 +29,25 @@ public class C4TimerConfig : BasePluginConfig
     [JsonPropertyName("EnableColorMessage")]
     public bool EnableColorMessage { get; set; } = true;
 
+    [JsonPropertyName("SidesTimerColor")]
+    public string SidesTimerColor { get; set; } = "45:white";
+
     [JsonPropertyName("TimeColor")]
-    public string TimeColor { get; set; } = "20:yellow, 10:red, 5: darkred";
+    public string TimeColor { get; set; } = "20:yellow, 10:red, 5:darkred";
 
     [JsonPropertyName("ProgressBarColor")]
-    public string ProgressBarColor { get; set; } = "20:yellow, 10:red, 5: darkred";
+    public string ProgressBarColor { get; set; } = "20:yellow, 10:red, 5:darkred";
 }
 
 public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 {
     public override string ModuleName => "C4 Timer";
-    public override string ModuleVersion => "1.3";
+    public override string ModuleVersion => "1.4";
     public override string ModuleAuthor => "belom0r";
 
     Dictionary<int, string> TimeColor = new Dictionary<int, string>();
     Dictionary<int, string> ProgressBarColor = new Dictionary<int, string>();
+    Dictionary<int, string> SidesTimerColor = new Dictionary<int, string>();
 
     private bool g_bPlantedC4 = false;
     private float g_flTimerLengthC4 = float.NaN;
@@ -76,6 +80,7 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         {
             ColorMsg(Config.TimeColor, TimeColor);
             ColorMsg(Config.ProgressBarColor, ProgressBarColor);
+            ColorMsg(Config.SidesTimerColor, SidesTimerColor);
         }
 
     }
@@ -165,11 +170,17 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 
                 if (Config.EnableTimer)
                 {
-                    StyleTimer = $"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}";
+                    if (Config.EnableColorMessage)
+                        StyleTimer = 
+                            $"<font class='fontSize-m' color='{SidesTimerColor[(int)g_flTimerСountdownC4]}'>{Config.LeftSideTimer}</font>" +
+                            $"<font class='fontSize-m' color='{TimeColor[(int)g_flTimerСountdownC4]}'>{g_flTimerСountdownC4}</font>" +
+                            $"<font class='fontSize-m' color='{SidesTimerColor[(int)g_flTimerСountdownC4]}'>{Config.RightSideTimer}</font>";
+                    else
+                        StyleTimer = $"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}";
                 }
 
                 if (Config.EnableColorMessage)
-                    Style = $"<font class='fontSize-m' color='{TimeColor[(int)g_flTimerСountdownC4]}'>{StyleTimer}</font><br><font class='fontSize-m' color='{ProgressBarColor[(int)g_flTimerСountdownC4]}'>{StyleProgressBar}</font>";
+                    Style = $"{StyleTimer}<br><font class='fontSize-m' color='{ProgressBarColor[(int)g_flTimerСountdownC4]}'>{StyleProgressBar}</font>";
                 else
                     Style = ConnectTransferString(StyleTimer, StyleProgressBar);
             }
@@ -200,9 +211,7 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         var PlantedC4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4");
 
         if (PlantedC4 == null || !PlantedC4.Any())
-        {
             return null;
-        }
 
         return PlantedC4.FirstOrDefault();
     }
@@ -210,13 +219,9 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
     public string ConnectTransferString(string String1, string String2)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
             return $"{String1}\r\n{String2}";
-        }
         else
-        {
             return $"{String1}\n{String2}";
-        }
     }
 
     public void ColorMsg(string Msg, Dictionary<int, string> TimeColor)
@@ -224,9 +229,7 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         TimeColor.Clear();
 
         for (int i = 0; i <= Config.TimerStarting; i++)
-        {
             TimeColor.Add(i, "white");
-        }
 
         if (!string.IsNullOrEmpty(Msg))
         {
@@ -237,9 +240,7 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
                 string[] Elements = Color.Split(':', StringSplitOptions.RemoveEmptyEntries);
 
                 for (int i = int.Parse(Elements[0]); i >= 0; i--)
-                {
                     TimeColor[i] = Elements[1];
-                }
             }
         }
     }
