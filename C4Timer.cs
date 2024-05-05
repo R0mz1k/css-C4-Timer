@@ -171,7 +171,7 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
                 if (Config.EnableTimer)
                 {
                     if (Config.EnableColorMessage)
-                        StyleTimer = 
+                        StyleTimer =
                             $"<font class='fontSize-m' color='{SidesTimerColor[(int)g_flTimerСountdownC4]}'>{Config.LeftSideTimer}</font>" +
                             $"<font class='fontSize-m' color='{TimeColor[(int)g_flTimerСountdownC4]}'>{g_flTimerСountdownC4}</font>" +
                             $"<font class='fontSize-m' color='{SidesTimerColor[(int)g_flTimerСountdownC4]}'>{Config.RightSideTimer}</font>";
@@ -180,7 +180,18 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
                 }
 
                 if (Config.EnableColorMessage)
-                    Style = $"{StyleTimer}<br><font class='fontSize-m' color='{ProgressBarColor[(int)g_flTimerСountdownC4]}'>{StyleProgressBar}</font>";
+                {
+                    if (StyleTimer.Length != 0)
+                        Style = Style + $"{StyleTimer}";
+
+                    if (StyleProgressBar.Length != 0)
+                    {
+                        if (Style.Length != 0)
+                            Style = Style + "<br>";
+
+                        Style = Style + $"<font class='fontSize-m' color='{ProgressBarColor[(int)g_flTimerСountdownC4]}'>{StyleProgressBar}</font>";
+                    }
+                }
                 else
                     Style = ConnectTransferString(StyleTimer, StyleProgressBar);
             }
@@ -218,6 +229,9 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 
     public string ConnectTransferString(string String1, string String2)
     {
+        if (String2.Length == 0)
+            return $"{String1}";
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return $"{String1}\r\n{String2}";
         else
