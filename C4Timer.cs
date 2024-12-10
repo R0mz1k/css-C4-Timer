@@ -3,7 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
-using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 using Timer = CounterStrikeSharp.API.Modules.Timers.Timer;
 
@@ -42,182 +42,148 @@ public class C4TimerConfig : BasePluginConfig
 public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
 {
     public override string ModuleName => "C4 Timer";
-    public override string ModuleVersion => "1.4";
+    public override string ModuleVersion => "1.6";
     public override string ModuleAuthor => "belom0r";
 
     Dictionary<int, string> TimeColor = new Dictionary<int, string>();
     Dictionary<int, string> ProgressBarColor = new Dictionary<int, string>();
     Dictionary<int, string> SidesTimerColor = new Dictionary<int, string>();
 
-    private bool g_bPlantedC4 = false;
-    private float g_flTimerLengthC4 = float.NaN;
-    private float g_flTimerСountdownC4 = float.NaN;
+    private bool PlantedC4 = false;
 
-    private string g_MsgTimerСountdownC4 = "";
+    private int TimerLength = 0;
+    private int TimerСountdown = 0;
 
-    private Timer? g_CountdownToExplosionC4;
+    private string messageCountdown = "";
+
+    private Timer? CountdownToExplosion;
 
     public required C4TimerConfig Config { get; set; }
-    public void OnConfigParsed(C4TimerConfig config)
-    {
-        Config = config;
-    }
+
+    public void OnConfigParsed(C4TimerConfig config) { Config = config; }
 
     public override void Load(bool hotReload)
     {
         RegisterEventHandler<EventBombPlanted>(BombPlantedPost); //bPlantedC4 = true
-
-        RegisterEventHandler<EventRoundStart>((@event, info) => { g_bPlantedC4 = false; ; return HookResult.Continue;});
-        RegisterEventHandler<EventBombExploded>((@event, info) => { g_bPlantedC4 = false; return HookResult.Continue; });
-        RegisterEventHandler<EventBombDefused>((@event, info) => { g_bPlantedC4 = false; return HookResult.Continue; });
+        RegisterEventHandler<EventRoundPrestart>((_, _) => { PlantedC4 = false; return HookResult.Continue; });
+        RegisterEventHandler<EventBombExploded>((_, _) => { PlantedC4 = false; return HookResult.Continue; });
+        RegisterEventHandler<EventBombDefused>((_, _) => { PlantedC4 = false; return HookResult.Continue; });
 
         if (Config.EnableColorMessage)
         {
             RegisterListener<Listeners.OnTick>(OnTick);
         }
 
-        if (Config.EnableColorMessage)
-        {
-            ColorMsg(Config.TimeColor, TimeColor);
-            ColorMsg(Config.ProgressBarColor, ProgressBarColor);
-            ColorMsg(Config.SidesTimerColor, SidesTimerColor);
-        }
-
+        ColorMsg(Config.TimeColor, TimeColor);
+        ColorMsg(Config.ProgressBarColor, ProgressBarColor);
+        ColorMsg(Config.SidesTimerColor, SidesTimerColor);
     }
 
     private HookResult BombPlantedPost(EventBombPlanted @event, GameEventInfo info)
     {
-        var ElementPlantedC4 = GetPlantedC4();
+        var planted = GetPlantedC4();
 
-        if (ElementPlantedC4 == null)
-        {
+        if (planted == null)
             return HookResult.Continue;
-        }
 
-        g_bPlantedC4 = true;
+        PlantedC4 = true;
 
-        g_flTimerLengthC4 = ElementPlantedC4.TimerLength + 1.0f;
-        g_flTimerСountdownC4 = ElementPlantedC4.TimerLength + 1.0f;
+        TimerLength = TimerСountdown = (int)(planted.TimerLength + 1.0f);
 
-        if (Config.TimerStarting > (int)g_flTimerLengthC4 || Config.TimerStarting < 0)
-        {
-            Config.TimerStarting = (int)g_flTimerLengthC4;
-        }
+        Config.TimerStarting = Math.Clamp(Config.TimerStarting, 0, TimerLength);
 
-        g_CountdownToExplosionC4 = new Timer(1.0f, CountdownToExplosionC4, TimerFlags.REPEAT);
+        CountdownToExplosion = new Timer(1.0f, CountdownToExplosionC4, TimerFlags.REPEAT);
 
-        Timers.Add(g_CountdownToExplosionC4);
+        Timers.Add(CountdownToExplosion);
 
         return HookResult.Continue;
     }
 
     public void OnTick()
     {
-        if (!string.IsNullOrEmpty(g_MsgTimerСountdownC4))
-        {
-            List<CCSPlayerController> Players = GetPlayers();
+        if (string.IsNullOrEmpty(messageCountdown))
+            return;
 
-            foreach (var Player in Players)
-            {
-                Player.PrintToCenterHtml(g_MsgTimerСountdownC4);
-            }
+        foreach (var Player in GetPlayers())
+        {
+            Player.PrintToCenterHtml(messageCountdown);
         }
     }
 
     public void CountdownToExplosionC4()
     {
-        g_flTimerСountdownC4--;
+        TimerСountdown--;
 
-        string Style = "";
-
-        if (g_flTimerСountdownC4 == 0)
+        if ((int)TimerСountdown == 0)
         {
-            if (Config.EnableColorMessage)
-            {
-                Style = "<font class='fontSize-m' color='darkred'>C4 bomb exploded !!!</font>";
-            }
-            else
-            {
-                Style = "C4 bomb exploded !!!";
-            }
+            messageCountdown = WrapWithColor("C4 bomb exploded !!!", "darkred");
         }
-        else
+        else if (TimerСountdown < 0 || !PlantedC4)
         {
-            string StyleTimer = "";
-            string StyleProgressBar = "";
+            CountdownToExplosion!.Kill();
+            Timers.Remove(CountdownToExplosion);
+            CountdownToExplosion = null;
 
-            if (g_flTimerСountdownC4 <= Config.TimerStarting)
-            {
-                if (Config.EnableProgressBar)
-                {
-                    int TimerStarting;
+            TimerLength = 0;
+            TimerСountdown = 0;
 
-                    if (Config.TimerStarting > 0)
-                        TimerStarting = Config.TimerStarting;
-                    else
-                        TimerStarting = (int)g_flTimerLengthC4;
+            messageCountdown = "";
 
-                    for (int i = TimerStarting; i > 0; i--)
-                    {
-                        if (i > g_flTimerСountdownC4)
-                            StyleProgressBar = StyleProgressBar + $"|";
-                        else
-                            StyleProgressBar = StyleProgressBar + $"-";
-                    }
-
-                    StyleProgressBar = $"[ {StyleProgressBar} ]";
-                }
-
-                if (Config.EnableTimer)
-                {
-                    if (Config.EnableColorMessage)
-                        StyleTimer =
-                            $"<font class='fontSize-m' color='{SidesTimerColor[(int)g_flTimerСountdownC4]}'>{Config.LeftSideTimer}</font>" +
-                            $"<font class='fontSize-m' color='{TimeColor[(int)g_flTimerСountdownC4]}'>{g_flTimerСountdownC4}</font>" +
-                            $"<font class='fontSize-m' color='{SidesTimerColor[(int)g_flTimerСountdownC4]}'>{Config.RightSideTimer}</font>";
-                    else
-                        StyleTimer = $"{Config.LeftSideTimer}{g_flTimerСountdownC4}{Config.RightSideTimer}";
-                }
-
-                if (Config.EnableColorMessage)
-                {
-                    if (StyleTimer.Length != 0)
-                        Style = Style + $"{StyleTimer}";
-
-                    if (StyleProgressBar.Length != 0)
-                    {
-                        if (Style.Length != 0)
-                            Style = Style + "<br>";
-
-                        Style = Style + $"<font class='fontSize-m' color='{ProgressBarColor[(int)g_flTimerСountdownC4]}'>{StyleProgressBar}</font>";
-                    }
-                }
-                else
-                    Style = ConnectTransferString(StyleTimer, StyleProgressBar);
-            }
+            return;
         }
+        else messageCountdown = GenerateCountdownMessage();
 
-        if (!string.IsNullOrEmpty(Style))
-        {
-            if (Config.EnableColorMessage)
-                g_MsgTimerСountdownC4 = Style;
-            else
-                VirtualFunctions.ClientPrintAll(HudDestination.Center, Style, 0, 0, 0, 0);
-        }
-
-        if (g_flTimerСountdownC4 == 0 || !g_bPlantedC4)
-        {
-            g_CountdownToExplosionC4!.Kill();
-            Timers.Remove(g_CountdownToExplosionC4);
-            g_CountdownToExplosionC4 = null;
-
-            g_flTimerLengthC4 = float.NaN;
-            g_flTimerСountdownC4 = float.NaN;
-            g_MsgTimerСountdownC4 = "";
-        }
+        if (!Config.EnableColorMessage)
+            VirtualFunctions.ClientPrintAll(HudDestination.Center, messageCountdown, 0, 0, 0, 0);
     }
 
-    public CPlantedC4? GetPlantedC4()
+    private string GenerateCountdownMessage()
+    {
+        if (TimerСountdown > Config.TimerStarting)
+            return "";
+
+        string timerStyle = GenerateTimerStyle();
+        string progressBarStyle = GenerateProgressBarStyle();
+
+        return Config.EnableColorMessage
+            ? $"{timerStyle}{progressBarStyle}"
+            : ConnectStrings(timerStyle, progressBarStyle);
+    }
+
+    private string GenerateTimerStyle()
+    {
+        if (!Config.EnableTimer)
+            return "";
+
+        string leftSide = WrapWithColor(Config.LeftSideTimer, SidesTimerColor[TimerСountdown]);
+        string time = WrapWithColor(TimerСountdown.ToString(), TimeColor[TimerСountdown]);
+        string rightSide = WrapWithColor(Config.RightSideTimer, SidesTimerColor[TimerСountdown]);
+
+        return $"{leftSide}{time}{rightSide}";
+    }
+
+    private string GenerateProgressBarStyle()
+    {
+        if (!Config.EnableProgressBar)
+            return "";
+
+        int total = Math.Min(Config.TimerStarting, TimerLength);
+
+        char[] progressBar = new char[total];
+        for (int i = 0; i < total; i++)
+            progressBar[i] = i >= TimerСountdown ? '-' : '|';
+
+        string progressBar_txt = WrapWithColor(new string(progressBar), ProgressBarColor[TimerСountdown]);
+
+        return Config.EnableTimer && Config.EnableColorMessage ? "<br>" + progressBar_txt : progressBar_txt;
+    }
+
+    private string WrapWithColor(string text, string color)
+    {
+        return Config.EnableColorMessage ? $"<font color='{color}'>{text}</font>" : text;
+    }
+
+    private CPlantedC4? GetPlantedC4()
     {
         var PlantedC4 = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4");
 
@@ -227,41 +193,47 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         return PlantedC4.FirstOrDefault();
     }
 
-    public string ConnectTransferString(string String1, string String2)
+    public string ConnectStrings(string str1, string str2)
     {
-        if (String2.Length == 0)
-            return $"{String1}";
+        if (string.IsNullOrEmpty(str2))
+            return str1;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return $"{String1}\r\n{String2}";
-        else
-            return $"{String1}\n{String2}";
+        return $"{str1}{Environment.NewLine}{str2}";
     }
 
-    public void ColorMsg(string Msg, Dictionary<int, string> TimeColor)
+    public void ColorMsg(string msg, Dictionary<int, string> colorDictionary)
     {
-        TimeColor.Clear();
+        colorDictionary.Clear();
 
         for (int i = 0; i <= Config.TimerStarting; i++)
-            TimeColor.Add(i, "white");
+            colorDictionary[i] = "white";
 
-        if (!string.IsNullOrEmpty(Msg))
+        if (!Config.EnableColorMessage || string.IsNullOrEmpty(msg))
+            return;
+
+        foreach (var color in msg.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
-            string[] Colors = Msg.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var Color in Colors)
+            try
             {
-                string[] Elements = Color.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                var elements = color.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                if (elements.Length != 2) continue;
 
-                for (int i = int.Parse(Elements[0]); i >= 0; i--)
-                    TimeColor[i] = Elements[1];
+                int index = int.Parse(elements[0]);
+                string colorValue = elements[1];
+
+                for (int i = index; i >= 0; i--)
+                    colorDictionary[i] = colorValue;
+            }
+            catch
+            {
+                Logger.LogError($"Invalid color format: {color}");
             }
         }
     }
 
     public List<CCSPlayerController> GetPlayers()
     {
-        List<CCSPlayerController> players = Utilities.GetPlayers();
-        return players.FindAll(player => player != null && player.IsValid && player.PlayerPawn.IsValid && player.PlayerPawn.Value?.IsValid == true && player.Connected == PlayerConnectedState.PlayerConnected);
+        return Utilities.GetPlayers().Where(player =>
+            player != null && player.IsValid && player.Connected == PlayerConnectedState.PlayerConnected).ToList();
     }
 }

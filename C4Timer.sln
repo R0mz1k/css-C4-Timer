@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.7.34221.43
+VisualStudioVersion = 17.9.34723.18
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "C4Timer", "C4Timer.csproj", "{728672EA-0634-4261-8D8A-550968805754}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "C4Timer", "C4Timer.csproj", "{ABC03A0F-2111-47C4-BEA8-A5589DE99BA2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{728672EA-0634-4261-8D8A-550968805754}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{728672EA-0634-4261-8D8A-550968805754}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{728672EA-0634-4261-8D8A-550968805754}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{728672EA-0634-4261-8D8A-550968805754}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABC03A0F-2111-47C4-BEA8-A5589DE99BA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABC03A0F-2111-47C4-BEA8-A5589DE99BA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABC03A0F-2111-47C4-BEA8-A5589DE99BA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABC03A0F-2111-47C4-BEA8-A5589DE99BA2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {A2FC5441-53E7-4A4B-B282-0B25F00A59FB}
+		SolutionGuid = {4222F3D5-AEDF-4CA5-9400-FE0C8D6E16F4}
 	EndGlobalSection
 EndGlobal
