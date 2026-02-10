@@ -134,7 +134,11 @@ public class C4Timer : BasePlugin, IPluginConfig<C4TimerConfig>
         else messageCountdown = GenerateCountdownMessage();
 
         if (!Config.EnableColorMessage)
-            VirtualFunctions.ClientPrintAll(HudDestination.Center, messageCountdown, 0, 0, 0, 0);
+            // 将以下代码：
+            // VirtualFunctions.ClientPrintAll(HudDestination.Center, messageCountdown, 0, 0, 0, 0);
+            // 替换为：
+            VirtualFunctions.ClientPrintAll(HudDestination.Center, messageCountdown, 0, 0, 0, 0, 0);
+            
     }
 
     private string GenerateCountdownMessage()
